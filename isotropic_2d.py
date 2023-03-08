@@ -6,7 +6,7 @@ import numba as nb
 import pygame as pg
 
 FPS = 60
-FPS = 0
+# FPS = 0
 
 WINDOW_SIZE = (800,800)
 
@@ -15,15 +15,15 @@ ARRAY_SHAPE = (80,80)
 # ARRAY_SHAPE = (400,400)
 
 
-# EDGE_CONDITIONS = "zero"
+EDGE_CONDITIONS = "zero"
 # EDGE_CONDITIONS = "periodical"
 
 CELL_SIZE = min(WINDOW_SIZE)/max(ARRAY_SHAPE)
 
-cell_arr = np.random.rand(*ARRAY_SHAPE)>0.4
+cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.4, 1)
 # cell_arr = np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) ) + np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) )[::-1]
 
-cell_arr_updated = cell_arr.copy()
+cell_arr_updated = cell_arr[1:-1,1:-1].copy()
 
 @nb.njit()
 def rule_result(cell_value,alive_neighbourhood):
@@ -34,7 +34,7 @@ def rule_result(cell_value,alive_neighbourhood):
 
 
 @nb.njit()
-def apply_rule_bulk(cells, cells_updated):
+def apply_rule(cells, cells_updated):
     alive_neighbourhood = int(-1)
     for i in range(1,cells.shape[0]-1):
         for j in range(1,cells.shape[1]-1):
@@ -43,20 +43,28 @@ def apply_rule_bulk(cells, cells_updated):
                 for sh_vert in (-1,0,1):
                     alive_neighbourhood+=cells[i+sh_hor,j+sh_vert]
             alive_neighbourhood-=cells[i,j]
-            cells_updated[i,j] = rule_result(cells[i,j], alive_neighbourhood)
+            cells_updated[i-1,j-1] = rule_result(cells[i,j], alive_neighbourhood)
 
+@nb.njit()
+def set_pad_zero(cells):
+    for i in range(cells.shape[0]):
+        cells[i,0]=0
+        cells[i,-1]=0
+    for j in range(cells.shape[1]):
+        cells[0,j]=0
+        cells[-1,j]=0
 
 def update_cells():
-    apply_rule_bulk(cell_arr, cell_arr_updated)
+    if EDGE_CONDITIONS=="zero":
+        set_pad_zero(cell_arr)
+    elif EDGE_CONDITIONS=="peridical":
+        raise NotImplementedError
+    else:
+        raise RuntimeError
 
-    # if EDGE_CONDITIONS=="zero":
-    #     raise NotImplementedError
-    # elif EDGE_CONDITIONS=="peridical":
-    #     raise NotImplementedError
-    # else:
-    #     raise RuntimeError
+    apply_rule(cell_arr, cell_arr_updated)
 
-    np.copyto(cell_arr, cell_arr_updated)
+    np.copyto(cell_arr[1:-1,1:-1], cell_arr_updated)
 
 
 pg.init()
