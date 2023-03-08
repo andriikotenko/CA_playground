@@ -5,22 +5,33 @@ import numba as nb
 
 import pygame as pg
 
+
+### TODO:
+# 1) interactivity: mouse cell state toggle
+# 2) check thoroughly periodical edge conditions using 1)
+# 3) separate function for calculating number of neighbours
+#       (smoother transtion to other types of 2d CA's in future)
+# 4) implement few other rules
+# 5) GPU processing (mostly for future 3d explorations)
+
+
+
 FPS = 60
-# FPS = 0
+FPS = 10
 
 WINDOW_SIZE = (800,800)
 
-# ARRAY_SHAPE = (10,10)
+ARRAY_SHAPE = (10,10)
 ARRAY_SHAPE = (80,80)
 # ARRAY_SHAPE = (400,400)
 
 
-EDGE_CONDITIONS = "zero"
-# EDGE_CONDITIONS = "periodical"
+# EDGE_CONDITIONS = "zero"
+EDGE_CONDITIONS = "periodical"
 
 CELL_SIZE = min(WINDOW_SIZE)/max(ARRAY_SHAPE)
 
-cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.4, 1)
+cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.6, 1)
 # cell_arr = np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) ) + np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) )[::-1]
 
 cell_arr_updated = cell_arr[1:-1,1:-1].copy()
@@ -54,11 +65,24 @@ def set_pad_zero(cells):
         cells[0,j]=0
         cells[-1,j]=0
 
+@nb.njit()
+def set_pad_periodical(cells):
+    for i in range(1,cells.shape[0]-1):
+        cells[i,0]=cells[i,-2]
+        cells[i,-1]=cells[i,1]
+    for j in range(1,cells.shape[1]-1):
+        cells[0,j]=cells[-2,j]
+        cells[-1,j]=cells[1,j]
+    cells[0,0]=cells[-2,-2]
+    cells[-1,-1]=cells[1,1]
+    cells[0,-1]=cells[-2,1]
+    cells[-1,0]=cells[1,-2]
+
 def update_cells():
     if EDGE_CONDITIONS=="zero":
         set_pad_zero(cell_arr)
-    elif EDGE_CONDITIONS=="peridical":
-        raise NotImplementedError
+    elif EDGE_CONDITIONS=="periodical":
+        set_pad_periodical(cell_arr)
     else:
         raise RuntimeError
 
@@ -90,7 +114,7 @@ def draw():
 
 def draw_cells():
     for i,j in itertools.product( range(ARRAY_SHAPE[0]), range(ARRAY_SHAPE[1]) ):
-        if cell_arr[i,j]==False:
+        if cell_arr[i+1,j+1]==False:
             continue
         pg.draw.rect(screen,
             "white",
