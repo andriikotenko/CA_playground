@@ -11,7 +11,6 @@ import pygame as pg
 # 2) check thoroughly periodical edge conditions using 1)
 # 3) implement few other rules (and compare speed)
 # 4) GPU processing (mostly for future 3d explorations)
-# 5) do something about the case when CELL_SIZE is not an integer
 
 
 
@@ -20,16 +19,13 @@ FPS = 0
 
 WINDOW_SIZE = (600,600)
 
-# ARRAY_SHAPE = (10,10)
-# ARRAY_SHAPE = (60,60)
-# ARRAY_SHAPE = (400,400)
-ARRAY_SHAPE = WINDOW_SIZE
+CELL_SIZE = 10
 
+ARRAY_SHAPE = (WINDOW_SIZE[0]//CELL_SIZE, WINDOW_SIZE[1]//CELL_SIZE)
 
 # EDGE_CONDITIONS = "zero"
 EDGE_CONDITIONS = "periodical"
 
-CELL_SIZE = min(WINDOW_SIZE)/max(ARRAY_SHAPE)
 
 cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.4, 1)
 # cell_arr = np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) ) + np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) )[::-1]
