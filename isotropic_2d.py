@@ -9,20 +9,20 @@ import pygame as pg
 ### TODO:
 # 1) interactivity: mouse cell state toggle
 # 2) check thoroughly periodical edge conditions using 1)
-# 3) separate function for calculating number of neighbours
-#       (smoother transtion to other types of 2d CA's in future)
-# 4) implement few other rules
-# 5) GPU processing (mostly for future 3d explorations)
+# 3) implement few other rules (and compare speed)
+# 4) GPU processing (mostly for future 3d explorations)
+# 5) recursive function for periodical boundary condition (also for easier extension to higher dimensions)
+# 6) do something about the case when CELL_SIZE is not an integer
 
 
 
 FPS = 60
-FPS = 10
+FPS = 1000
 
-WINDOW_SIZE = (800,800)
+WINDOW_SIZE = (600,600)
 
 ARRAY_SHAPE = (10,10)
-ARRAY_SHAPE = (80,80)
+ARRAY_SHAPE = (60,60)
 # ARRAY_SHAPE = (400,400)
 
 
@@ -36,6 +36,7 @@ cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.6, 1)
 
 cell_arr_updated = cell_arr[1:-1,1:-1].copy()
 
+
 @nb.njit()
 def rule_result(cell_value,alive_neighbourhood):
     if cell_value:
@@ -43,18 +44,21 @@ def rule_result(cell_value,alive_neighbourhood):
     else:
         return alive_neighbourhood==3
 
+@nb.njit()
+def get_n_alive_neighbours(cells, i, j):
+    alive_neighbourhood = int(0)
+    for sh_hor in (-1,0,1):
+        for sh_vert in (-1,0,1):
+            alive_neighbourhood+=cells[i+sh_hor,j+sh_vert]
+    alive_neighbourhood-=cells[i,j]
+    return alive_neighbourhood
 
 @nb.njit()
 def apply_rule(cells, cells_updated):
-    alive_neighbourhood = int(-1)
     for i in range(1,cells.shape[0]-1):
         for j in range(1,cells.shape[1]-1):
-            alive_neighbourhood = 0
-            for sh_hor in (-1,0,1):
-                for sh_vert in (-1,0,1):
-                    alive_neighbourhood+=cells[i+sh_hor,j+sh_vert]
-            alive_neighbourhood-=cells[i,j]
-            cells_updated[i-1,j-1] = rule_result(cells[i,j], alive_neighbourhood)
+            n_alive_neighbours = get_n_alive_neighbours(cells, i, j)
+            cells_updated[i-1,j-1] = rule_result(cells[i,j], n_alive_neighbours)
 
 @nb.njit()
 def set_pad_zero(cells):
@@ -78,13 +82,17 @@ def set_pad_periodical(cells):
     cells[0,-1]=cells[-2,1]
     cells[-1,0]=cells[1,-2]
 
+
+
+if EDGE_CONDITIONS=="zero":
+    set_pad = set_pad_zero
+elif EDGE_CONDITIONS=="periodical":
+    set_pad = set_pad_periodical
+else:
+    raise RuntimeError
+
 def update_cells():
-    if EDGE_CONDITIONS=="zero":
-        set_pad_zero(cell_arr)
-    elif EDGE_CONDITIONS=="periodical":
-        set_pad_periodical(cell_arr)
-    else:
-        raise RuntimeError
+    set_pad(cell_arr)
 
     apply_rule(cell_arr, cell_arr_updated)
 
