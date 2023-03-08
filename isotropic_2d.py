@@ -7,9 +7,8 @@ import pygame as pg
 
 
 ### TODO:
-# 1) check thoroughly periodical edge conditions using 1)
-# 2) implement few other rules (and compare speed)
-# 3) GPU processing (mostly for future 3d explorations)
+# 1) implement few other rules (and compare speed)
+# 2) GPU processing (mostly for future 3d explorations)
 
 
 
@@ -18,7 +17,7 @@ FPS = 60
 
 WINDOW_SIZE = (600,600)
 
-CELL_SIZE = 60
+CELL_SIZE = 3
 
 ARRAY_SHAPE = (WINDOW_SIZE[0]//CELL_SIZE, WINDOW_SIZE[1]//CELL_SIZE)
 
@@ -116,6 +115,8 @@ def update_cells():
 def toggle_cell_state(pos):
     index = (pos[0]//CELL_SIZE+1, pos[1]//CELL_SIZE+1)
     cell_arr[index] = not cell_arr[index]
+    if cell_arr[index]:
+        draw_cell(*index)
 
 
 pg.init()
@@ -132,32 +133,39 @@ def check_events():
         elif event.type==pg.KEYDOWN and event.key==pg.K_SPACE:
             global SIMULATION_ON
             SIMULATION_ON = not SIMULATION_ON
-            pg.display.set_caption("PAUSED")
 
 
 def update():
-    update_cells()
+    if SIMULATION_ON:
+        update_cells()
+        caption = "fps = {}".format(clock.get_fps())
+    else:
+        caption = "PAUSED"
+        pg.display.set_caption(caption)
 
     pg.display.flip()
     clock.tick(FPS)
-    pg.display.set_caption("fps = {}".format(clock.get_fps()))
+
+    pg.display.set_caption(caption)
+
 
 def draw():
     screen.fill("black")
     draw_cells()
 
+def draw_cell(i,j):
+    pg.draw.rect(screen,
+        "white",
+        (CELL_SIZE*i, CELL_SIZE*j, CELL_SIZE, CELL_SIZE))
+
 def draw_cells():
     for i,j in itertools.product( range(ARRAY_SHAPE[0]), range(ARRAY_SHAPE[1]) ):
         if cell_arr[i+1,j+1]==False:
             continue
-        pg.draw.rect(screen,
-            "white",
-            (CELL_SIZE*i, CELL_SIZE*j,
-            CELL_SIZE, CELL_SIZE))
+        draw_cell(i,j)
 
 if __name__=="__main__":
     while True:
         check_events()
-        if SIMULATION_ON:
-            draw()
-            update()
+        draw()
+        update()
