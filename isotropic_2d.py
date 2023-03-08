@@ -7,19 +7,18 @@ import pygame as pg
 
 
 ### TODO:
-# 1) interactivity: mouse cell state toggle
-# 2) check thoroughly periodical edge conditions using 1)
-# 3) implement few other rules (and compare speed)
-# 4) GPU processing (mostly for future 3d explorations)
+# 1) check thoroughly periodical edge conditions using 1)
+# 2) implement few other rules (and compare speed)
+# 3) GPU processing (mostly for future 3d explorations)
 
 
 
 FPS = 60
-FPS = 0
+# FPS = 1
 
 WINDOW_SIZE = (600,600)
 
-CELL_SIZE = 10
+CELL_SIZE = 60
 
 ARRAY_SHAPE = (WINDOW_SIZE[0]//CELL_SIZE, WINDOW_SIZE[1]//CELL_SIZE)
 
@@ -32,6 +31,7 @@ cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.4, 1)
 
 cell_arr_updated = cell_arr[1:-1,1:-1].copy()
 
+SIMULATION_ON = True
 
 @nb.njit()
 def rule_result(cell_value,alive_neighbourhood):
@@ -113,6 +113,10 @@ def update_cells():
 
     np.copyto(cell_arr[1:-1,1:-1], cell_arr_updated)
 
+def toggle_cell_state(pos):
+    index = (pos[0]//CELL_SIZE+1, pos[1]//CELL_SIZE+1)
+    cell_arr[index] = not cell_arr[index]
+
 
 pg.init()
 
@@ -123,6 +127,13 @@ def check_events():
     for event in pg.event.get():
         if event.type==pg.QUIT or (event.type==pg.KEYDOWN and event.key==pg.K_ESCAPE):
             pg.quit()
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            toggle_cell_state(event.pos)
+        elif event.type==pg.KEYDOWN and event.key==pg.K_SPACE:
+            global SIMULATION_ON
+            SIMULATION_ON = not SIMULATION_ON
+            pg.display.set_caption("PAUSED")
+
 
 def update():
     update_cells()
@@ -147,5 +158,6 @@ def draw_cells():
 if __name__=="__main__":
     while True:
         check_events()
-        draw()
-        update()
+        if SIMULATION_ON:
+            draw()
+            update()
