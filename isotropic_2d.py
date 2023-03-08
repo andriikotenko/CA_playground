@@ -11,19 +11,19 @@ import pygame as pg
 # 2) check thoroughly periodical edge conditions using 1)
 # 3) implement few other rules (and compare speed)
 # 4) GPU processing (mostly for future 3d explorations)
-# 5) recursive function for periodical boundary condition (also for easier extension to higher dimensions)
-# 6) do something about the case when CELL_SIZE is not an integer
+# 5) do something about the case when CELL_SIZE is not an integer
 
 
 
 FPS = 60
-FPS = 1000
+FPS = 0
 
 WINDOW_SIZE = (600,600)
 
-ARRAY_SHAPE = (10,10)
-ARRAY_SHAPE = (60,60)
+# ARRAY_SHAPE = (10,10)
+# ARRAY_SHAPE = (60,60)
 # ARRAY_SHAPE = (400,400)
+ARRAY_SHAPE = WINDOW_SIZE
 
 
 # EDGE_CONDITIONS = "zero"
@@ -31,7 +31,7 @@ EDGE_CONDITIONS = "periodical"
 
 CELL_SIZE = min(WINDOW_SIZE)/max(ARRAY_SHAPE)
 
-cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.6, 1)
+cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.4, 1)
 # cell_arr = np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) ) + np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) )[::-1]
 
 cell_arr_updated = cell_arr[1:-1,1:-1].copy()
@@ -69,18 +69,37 @@ def set_pad_zero(cells):
         cells[0,j]=0
         cells[-1,j]=0
 
+
 @nb.njit()
-def set_pad_periodical(cells):
-    for i in range(1,cells.shape[0]-1):
-        cells[i,0]=cells[i,-2]
-        cells[i,-1]=cells[i,1]
-    for j in range(1,cells.shape[1]-1):
-        cells[0,j]=cells[-2,j]
-        cells[-1,j]=cells[1,j]
-    cells[0,0]=cells[-2,-2]
-    cells[-1,-1]=cells[1,1]
-    cells[0,-1]=cells[-2,1]
-    cells[-1,0]=cells[1,-2]
+def set_pad_periodical_1d(cells_1d):
+    cells_1d[0]=cells_1d[-2]
+    cells_1d[-1]=cells_1d[1]
+
+@nb.njit()
+def set_pad_periodical_2d(cells_2d):
+    for i in range(1,cells_2d.shape[0]-1):
+        set_pad_periodical_1d(cells_2d[i,:])
+    for j in range(1,cells_2d.shape[1]-1):
+        set_pad_periodical_1d(cells_2d[:,j])
+    cells_2d[0,0]=cells_2d[-2,-2]
+    cells_2d[-1,-1]=cells_2d[1,1]
+    cells_2d[0,-1]=cells_2d[-2,1]
+    cells_2d[-1,0]=cells_2d[1,-2]
+
+set_pad_periodical = set_pad_periodical_2d
+
+# @nb.njit()
+# def set_pad_periodical(cells):
+#     for i in range(1,cells.shape[0]-1):
+#         cells[i,0]=cells[i,-2]
+#         cells[i,-1]=cells[i,1]
+#     for j in range(1,cells.shape[1]-1):
+#         cells[0,j]=cells[-2,j]
+#         cells[-1,j]=cells[1,j]
+#     cells[0,0]=cells[-2,-2]
+#     cells[-1,-1]=cells[1,1]
+#     cells[0,-1]=cells[-2,1]
+#     cells[-1,0]=cells[1,-2]
 
 
 
