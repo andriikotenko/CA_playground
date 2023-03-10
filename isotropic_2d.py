@@ -9,11 +9,15 @@ import pygame as pg
 ### TODO:
 # 1) implement few other rules (and compare speed)
 # 2) GPU processing (mostly for future 3d explorations)
+# 3) check that i really pass references and not copying arrays with '='. Also understand variable scopes
+# 4) center if not square screen?
+# 5) compare simulation speed when 1. using np.copyto, 2. when switching references of arrays
+# 6) decouple FPS from simulation speed and interaction speed (responsiveness)
 
 
 
 FPS = 60
-# FPS = 1
+FPS = 0
 
 WINDOW_SIZE = (600,600)
 
@@ -25,10 +29,17 @@ ARRAY_SHAPE = (WINDOW_SIZE[0]//CELL_SIZE, WINDOW_SIZE[1]//CELL_SIZE)
 EDGE_CONDITIONS = "periodical"
 
 
-cell_arr = np.pad(np.random.rand(*ARRAY_SHAPE)>0.4, 1)
+cell_arr_a = np.pad(np.random.rand(*ARRAY_SHAPE)>0.4, 1)
 # cell_arr = np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) ) + np.diagflat( np.ones(ARRAY_SHAPE[0],dtype=bool) )[::-1]
 
-cell_arr_updated = cell_arr[1:-1,1:-1].copy()
+cell_arr_b = cell_arr_a.copy()
+
+
+NOW_ARR_A = True
+
+cell_arr = cell_arr_a
+cell_arr_updated = cell_arr_b
+
 
 SIMULATION_ON = True
 
@@ -53,7 +64,7 @@ def apply_rule(cells, cells_updated):
     for i in range(1,cells.shape[0]-1):
         for j in range(1,cells.shape[1]-1):
             n_alive_neighbours = get_n_alive_neighbours(cells, i, j)
-            cells_updated[i-1,j-1] = rule_result(cells[i,j], n_alive_neighbours)
+            cells_updated[i,j] = rule_result(cells[i,j], n_alive_neighbours)
 
 @nb.njit()
 def set_pad_zero(cells):
@@ -83,20 +94,6 @@ def set_pad_periodical_2d(cells_2d):
 
 set_pad_periodical = set_pad_periodical_2d
 
-# @nb.njit()
-# def set_pad_periodical(cells):
-#     for i in range(1,cells.shape[0]-1):
-#         cells[i,0]=cells[i,-2]
-#         cells[i,-1]=cells[i,1]
-#     for j in range(1,cells.shape[1]-1):
-#         cells[0,j]=cells[-2,j]
-#         cells[-1,j]=cells[1,j]
-#     cells[0,0]=cells[-2,-2]
-#     cells[-1,-1]=cells[1,1]
-#     cells[0,-1]=cells[-2,1]
-#     cells[-1,0]=cells[1,-2]
-
-
 
 if EDGE_CONDITIONS=="zero":
     set_pad = set_pad_zero
@@ -106,11 +103,21 @@ else:
     raise RuntimeError
 
 def update_cells():
+    global NOW_ARR_A
+    global cell_arr
+    global cell_arr_updated
+
     set_pad(cell_arr)
 
     apply_rule(cell_arr, cell_arr_updated)
 
-    np.copyto(cell_arr[1:-1,1:-1], cell_arr_updated)
+    if NOW_ARR_A:
+        cell_arr = cell_arr_a
+        cell_arr_updated = cell_arr_b
+    else:
+        cell_arr = cell_arr_b
+        cell_arr_updated = cell_arr_a
+    NOW_ARR_A = not NOW_ARR_A
 
 def toggle_cell_state(pos):
     index = (pos[0]//CELL_SIZE+1, pos[1]//CELL_SIZE+1)
@@ -128,6 +135,7 @@ def check_events():
     for event in pg.event.get():
         if event.type==pg.QUIT or (event.type==pg.KEYDOWN and event.key==pg.K_ESCAPE):
             pg.quit()
+            exit()
         elif event.type == pg.MOUSEBUTTONDOWN:
             toggle_cell_state(event.pos)
         elif event.type==pg.KEYDOWN and event.key==pg.K_SPACE:
